@@ -3,19 +3,25 @@
 # @Date    : 2017-06-26 15:27:24
 # @Author  : weiping (chengwei2011ww@163.com)
 # @Link    : https://github.com/Weiping1992
-# @Version : 0.1
+# @Version : 0.15
+
+# python version 2.7
+
+'''
+说明：
+    实现将指定路径中的中文名称的文件和文件夹改成指定名称
+    需要提前配置好翻译的配置文件Ch2En.json（放在脚本的同一目录下）,配置见样例
+使用方法：
+    python replaceChineseName.py --no-recurse --path=/opt/replaceChineseName_test --config=./Ch2En.json
+'''
 
 import os
 import re
 import json
-
+import getopt
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
-
-TargetPath="/opt/replaceChineseName_test"
-dicTranslate=json.load(open('Translate.json'))
-#print dicTranslate
 
 def check_chinese_characters(str):
     for ch in str:
@@ -23,7 +29,8 @@ def check_chinese_characters(str):
             return True
     return False
 
-def rename_Chinese(path):
+#windows filename encode with gbk
+def rename_Chinese(path,recursive=1):
     for root,dirs,files in os.walk(path):
         for dir in dirs:
             dir_uni=os.path.join(dir).encode('gbk')
@@ -35,7 +42,8 @@ def rename_Chinese(path):
                 #print root
                 path_sub=os.path.join(root,name_new)
                 os.rename(os.path.join(root,dir),path_sub)
-            rename_Chinese(path_sub)
+            if recursive=1:
+                rename_Chinese(path_sub)
         for file in files:
             file_uni=os.path.join(file).decode('gbk')
             #print repr(file_uni)
@@ -44,7 +52,7 @@ def rename_Chinese(path):
                 #print name_new
                 os.rename(os.path.join(root,file),os.path.join(root.name_new))
 
-def check_done(path):
+def find_Chinese(path):
     num_chinese=0
     List_ch=[]
     for root,dirs,files in os.walk(path):
@@ -64,14 +72,33 @@ def check_done(path):
         print List_ch
 
 if __name__ == '__main__':
-    check_done(TargetPath)
-    run=1
-    while(run):
-        try:
-            rename_Chinese(TargetPath)
-        except UnicodeDecodeError:
-            run=1
-        else:
-            run=0
+    TargetPath=str(os.getcwd())
+    TranslateConfig='Ch2En.json'
+    recurse=1        #默认是递归的
+    try:
+        ops,args=getopt.getopt(sys.argc[1:],'h',['help','no-recurse','path=','config='])
+    except:
+        sys.exit(1)
+    for op,value in ops:
+        if op in ('-h','--help'):
+            usage()
+            sys.exit(0)
+        if op in ('--no-recurse'):
+            recurse=0
+        if op in ('--path'):
+            TargetPath=value
+        if op in ('--config'):
+            TranslateConfig=value
 
-    check_done(TargetPath)
+    dicTranslate=json.load(open(TranslateConfig,'r'))
+    #print dicTranslate
+
+    find_Chinese(TargetPath)
+    while(1):
+        try:
+            rename_Chinese(TargetPath,recurse)
+        except UnicodeDecodeError:
+            continue
+        else:
+            break
+    find_Chinese(TargetPath)
